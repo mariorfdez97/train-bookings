@@ -1,4 +1,4 @@
-# Train Bookings 🚂
+# Train Bookings 
 
 App web para reservar billetes de tren. Hecha con React, TypeScript y Vite.
 
