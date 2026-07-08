@@ -14,10 +14,11 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from 'dayjs'
 
 import { getEstaciones } from '../../services/estaciones.service.ts'
+import { buscarViajes } from '../../services/busqueda.service.ts'
 import type { Estacion } from '../../types/index.ts'
+import type { Viaje } from '../../services/busqueda.service.ts'
 import './SearchForm.css'
 
-// Definimos la forma de los datos que vamos a guardar en el formulario
 interface FormState {
   origen: Estacion | null
   destino: Estacion | null
@@ -27,7 +28,6 @@ interface FormState {
   pasajeros: number
 }
 
-// Valores por defecto al empezar
 const defaultState: FormState = {
   origen: null,
   destino: null,
@@ -38,12 +38,11 @@ const defaultState: FormState = {
 }
 
 export default function SearchForm() {
-  // 1. ESTADO DEL COMPONENTE
-  // isLoading nos dice si estamos esperando a que carguen las estaciones
   const [isLoading, setIsLoading] = useState(true)
+  const [isSearching, setIsSearching] = useState(false)
   const [estaciones, setEstaciones] = useState<Estacion[]>([])
+  const [resultados, setResultados] = useState<Viaje[]>([])
 
-  // Estado del formulario: primero intentamos leer de localStorage
   const [formData, setFormData] = useState<FormState>(() => {
     const saved = localStorage.getItem('trainSearchForm')
     if (saved) {
@@ -56,10 +55,7 @@ export default function SearchForm() {
     return defaultState
   })
 
-  // 2. EFECTOS (useEffect)
-  // Este useEffect se ejecuta SOLO UNA VEZ al montar el componente (por el array vacío [])
   useEffect(() => {
-    // Definimos una función asíncrona dentro porque useEffect no puede ser async directamente
     async function loadData() {
       setIsLoading(true)
       const data = await getEstaciones()
@@ -70,18 +66,25 @@ export default function SearchForm() {
     loadData()
   }, [])
 
-  // Este useEffect se ejecuta CADA VEZ que formData cambia
   useEffect(() => {
     localStorage.setItem('trainSearchForm', JSON.stringify(formData))
   }, [formData])
 
-  // 3. FUNCIONES MANEJADORAS
-  const handleBuscar = () => {
-    console.log("Buscando viajes con:", formData)
-    // Aquí luego añadiremos la lógica de búsqueda
+  const handleBuscar = async () => {
+    if (!formData.origen || !formData.destino || !formData.fechaIda) return;
+
+    setIsSearching(true);
+    
+    const viajes = await buscarViajes(
+      formData.origen.idEstacion, 
+      formData.destino.idEstacion, 
+      formData.pasajeros
+    );
+    
+    setResultados(viajes);
+    setIsSearching(false);
   }
 
-  // Si estamos cargando, mostramos la animación CSS y no el formulario
   if (isLoading) {
     return (
       <div className="loader-container">
@@ -91,7 +94,6 @@ export default function SearchForm() {
     )
   }
 
-  // 4. RENDERIZADO DEL FORMULARIO
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Paper elevation={3} className="search-form-container">
@@ -163,12 +165,42 @@ export default function SearchForm() {
             color="primary"
             onClick={handleBuscar}
             className="search-button"
-            disabled={!formData.origen || !formData.destino || !formData.fechaIda}
+            disabled={!formData.origen || !formData.destino || !formData.fechaIda || isSearching}
           >
-            Buscar
+            {isSearching ? 'Buscando trenes...' : 'Buscar'}
           </Button>
         </Box>
       </Paper>
+
+      {/* RESULTADOS DE LA BÚSQUEDA */}
+      {resultados.length > 0 && (
+        <div className="resultados-container">
+          <h3>Billetes Disponibles</h3>
+          {resultados.map((viaje) => (
+            <Paper key={viaje.idViaje} className="billete-card" elevation={2}>
+              
+              <div className="billete-header">
+                <span className="tren-tipo">{viaje.tipoTren}</span>
+                <span className="tren-precio">{viaje.precioTotal} €</span>
+              </div>
+              
+              <div className="billete-horarios">
+                <div>
+                  <strong>Salida:</strong> {viaje.horaSalida}
+                </div>
+                <div className="duracion">
+                  ⏱️ {viaje.duracionMinutos} min
+                </div>
+                <div>
+                  <strong>Llegada:</strong> {viaje.horaLlegada}
+                </div>
+              </div>
+
+            </Paper>
+          ))}
+        </div>
+      )}
+
     </LocalizationProvider>
   )
 }
