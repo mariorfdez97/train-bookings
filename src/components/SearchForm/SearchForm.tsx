@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { 
-  Autocomplete, 
-  TextField, 
-  Checkbox, 
-  FormControlLabel, 
+import {
+  Autocomplete,
+  TextField,
+  Checkbox,
+  FormControlLabel,
   Button,
   Box,
   Paper
@@ -13,6 +13,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import dayjs from 'dayjs'
 
+import { useBooking } from '../../context/BookingContext.tsx'
 import { getEstaciones } from '../../services/estaciones.service.ts'
 import { buscarViajes } from '../../services/busqueda.service.ts'
 import type { Estacion } from '../../types/index.ts'
@@ -42,6 +43,10 @@ export default function SearchForm() {
   const [isSearching, setIsSearching] = useState(false)
   const [estaciones, setEstaciones] = useState<Estacion[]>([])
   const [resultados, setResultados] = useState<Viaje[]>([])
+  const [hasSearched, setHasSearched] = useState(false)
+
+  // Traemos nuestro "carrito global"
+  const { viajeIda, setViajeIda, pasajeros, setPasajeros } = useBooking()
 
   const [formData, setFormData] = useState<FormState>(() => {
     const saved = localStorage.getItem('trainSearchForm')
@@ -62,7 +67,7 @@ export default function SearchForm() {
       setEstaciones(data)
       setIsLoading(false)
     }
-    
+
     loadData()
   }, [])
 
@@ -71,18 +76,23 @@ export default function SearchForm() {
   }, [formData])
 
   const handleBuscar = async () => {
-    if (!formData.origen || !formData.destino || !formData.fechaIda) return;
+    if (!formData.origen || !formData.destino || !formData.fechaIda) return; //por si acaso funciona mal
 
-    setIsSearching(true);
-    
+    setIsSearching(true); // para que no pueda repetir búsqueda
+    setHasSearched(false);
+
     const viajes = await buscarViajes(
-      formData.origen.idEstacion, 
-      formData.destino.idEstacion, 
+      formData.origen.idEstacion,
+      formData.destino.idEstacion,
       formData.pasajeros
     );
-    
+
+    // Guardamos en el carrito para cuánta gente estamos buscando
+    setPasajeros(formData.pasajeros);
+
     setResultados(viajes);
     setIsSearching(false);
+    setHasSearched(true);
   }
 
   if (isLoading) {
@@ -98,14 +108,18 @@ export default function SearchForm() {
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Paper elevation={3} className="search-form-container">
         <h2>Encuentra tu viaje</h2>
-        
+
         <Box className="form-grid">
           {/* Origen */}
           <Autocomplete
             options={estaciones}
+            // getOptionLabel le dice a MUI qué campo del objeto mostrar en la pantalla (el texto de la lista)
             getOptionLabel={(option) => option.nombre}
             value={formData.origen}
-            onChange={(_, newValue) => setFormData({ ...formData, origen: newValue })}
+            // onChange se dispara al elegir una opción. 
+            // El '_' significa que ignoramos el evento de clic nativo, solo nos interesa el 'newValue' (la ciudad elegida)
+            // { ...formData } hace una fotocopia del formulario entero antes de cambiar el origen (evita mutar el estado directamente)
+            onChange={(_, newValue) => setFormData({ ...formData, origen: newValue })} 
             renderInput={(params) => <TextField {...params} label="Estación de origen" />}
             isOptionEqualToValue={(option, value) => option.idEstacion === value.idEstacion}
           />
@@ -115,8 +129,10 @@ export default function SearchForm() {
             options={estaciones}
             getOptionLabel={(option) => option.nombre}
             value={formData.destino}
+            // Hacemos la misma fotocopia con el spread operator (...formData) pero esta vez actualizando el destino
             onChange={(_, newValue) => setFormData({ ...formData, destino: newValue })}
             renderInput={(params) => <TextField {...params} label="Estación de destino" />}
+            // isOptionEqualToValue le sirve a MUI para saber internamente si dos opciones son exactamente la misma
             isOptionEqualToValue={(option, value) => option.idEstacion === value.idEstacion}
           />
 
@@ -131,7 +147,7 @@ export default function SearchForm() {
           {/* Checkbox Solo Ida */}
           <FormControlLabel
             control={
-              <Checkbox 
+              <Checkbox
                 checked={formData.soloIda}
                 onChange={(e) => setFormData({ ...formData, soloIda: e.target.checked })}
               />
@@ -159,9 +175,9 @@ export default function SearchForm() {
             onChange={(e) => setFormData({ ...formData, pasajeros: parseInt(e.target.value) || 1 })}
           />
 
-          <Button 
-            variant="contained" 
-            size="large" 
+          <Button
+            variant="contained"
+            size="large"
             color="primary"
             onClick={handleBuscar}
             className="search-button"
@@ -172,34 +188,76 @@ export default function SearchForm() {
         </Box>
       </Paper>
 
-      {/* RESULTADOS DE LA BÚSQUEDA */}
-      {resultados.length > 0 && (
+      {/* RESULTADOS DE LA BÚSQUEDA Y CARRITO */}
+      <Box className="layout-resultados-carrito">
+        {/* Lado izquierdo: Lista de trenes */}
         <div className="resultados-container">
-          <h3>Billetes Disponibles</h3>
-          {resultados.map((viaje) => (
-            <Paper key={viaje.idViaje} className="billete-card" elevation={2}>
-              
-              <div className="billete-header">
-                <span className="tren-tipo">{viaje.tipoTren}</span>
-                <span className="tren-precio">{viaje.precioTotal} €</span>
-              </div>
-              
-              <div className="billete-horarios">
-                <div>
-                  <strong>Salida:</strong> {viaje.horaSalida}
-                </div>
-                <div className="duracion">
-                  ⏱️ {viaje.duracionMinutos} min
-                </div>
-                <div>
-                  <strong>Llegada:</strong> {viaje.horaLlegada}
-                </div>
-              </div>
+          {resultados.length > 0 && <h3>Billetes Disponibles</h3>}
 
+          {resultados.map((viaje) => {
+            const isSelected = viajeIda?.idViaje === viaje.idViaje;
+
+            return (
+              <Paper
+                key={viaje.idViaje}
+                className={`billete-card ${isSelected ? 'selected' : ''}`}
+                elevation={isSelected ? 6 : 2}
+                onClick={() => setViajeIda(viaje)}
+              >
+                <div className="billete-header">
+                  <span className="tren-tipo">{viaje.tipoTren}</span>
+                  <span className="tren-precio">{viaje.precioTotal} €</span>
+                </div>
+
+                <div className="billete-horarios">
+                  <div>
+                    <strong>Salida:</strong> {viaje.horaSalida}
+                  </div>
+                  <div className="duracion">
+                    ⏱️ {viaje.duracionMinutos} min
+                  </div>
+                  <div>
+                    <strong>Llegada:</strong> {viaje.horaLlegada}
+                  </div>
+                </div>
+              </Paper>
+            )
+          })}
+
+          {hasSearched && resultados.length === 0 && (
+            <Paper elevation={2} className="no-resultados-card">
+              <p className="no-resultados-title">⚠️ No se encontraron viajes disponibles</p>
+              <p className="no-resultados-text">
+                Por favor, verifica el trayecto seleccionado. Ten en cuenta que la base de datos actual solo admite rutas en la dirección predefinida (por ejemplo: de <strong>Madrid</strong> hacia <strong>Sevilla</strong>, <strong>Gijón</strong> o <strong>Elche</strong>, pero no en sentido contrario).
+              </p>
             </Paper>
-          ))}
+          )}
         </div>
-      )}
+
+        {/* Lado derecho: Carrito de compra flotante */}
+        {resultados.length > 0 && (
+          <div className="carrito-container">
+            <Paper elevation={3} className="carrito-card">
+              <h3>Resumen de Reserva</h3>
+              {viajeIda ? (
+                <>
+                  <p><strong>Tren:</strong> {viajeIda.tipoTren}</p>
+                  <p><strong>Trayecto:</strong> {formData.origen?.nombre} ➔ {formData.destino?.nombre}</p>
+                  <p><strong>Salida:</strong> {viajeIda.horaSalida}</p>
+                  <p><strong>Pasajeros:</strong> {pasajeros}</p>
+                  <hr className="carrito-divider" />
+                  <h2 className="carrito-total">Total: {viajeIda.precioTotal} €</h2>
+                  <Button variant="contained" color="success" size="large" fullWidth>
+                    Seleccionar Asientos
+                  </Button>
+                </>
+              ) : (
+                <p className="carrito-vacio">Selecciona un viaje de la lista para continuar.</p>
+              )}
+            </Paper>
+          </div>
+        )}
+      </Box>
 
     </LocalizationProvider>
   )
