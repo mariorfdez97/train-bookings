@@ -13,6 +13,10 @@ function App() {
       <main className="app-main">
         <Routes>
           <Route path="/" element={<SearchForm />} />
+          {/* Aquí añadiremos la pantalla de seleccionar asientos pronto */}
+        </Routes>
+        <Routes>
+          <Route path="/" element={<SearchForm />} />
           {/*  Pantalla para seleccionar asientos pronto  */}
         </Routes>
       </main>
