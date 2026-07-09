@@ -55,14 +55,18 @@
   100% { opacity: 0.5; }
 }
 
-/* RESULTADOS DE BÚSQUEDA */
-.resultados-container {
+/* RESULTADOS Y CARRITO */
+.layout-resultados-carrito {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* Lista de resultados ocupa doble que el carrito */
+  gap: 2rem;
   margin-top: 2rem;
-  max-width: 800px;
+  max-width: 1000px;
   margin-left: auto;
   margin-right: auto;
 }
 
+/* LISTA DE BILLETES */
 .resultados-container h3 {
   color: #333;
   margin-bottom: 1rem;
@@ -71,7 +75,20 @@
 .billete-card {
   padding: 1.5rem;
   margin-bottom: 1rem;
-  border-left: 6px solid #1976d2 !important; /* Marca azul bonita a la izquierda */
+  border-left: 6px solid #ccc !important; /* Gris por defecto */
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.billete-card:hover {
+  transform: translateY(-2px);
+  border-left-color: #1976d2 !important; /* Azul al pasar el ratón */
+}
+
+.billete-card.selected {
+  border-left-color: #2e7d32 !important; /* Verde si está seleccionado */
+  border: 2px solid #2e7d32;
+  background-color: #f1f8e9; /* Fondo muy clarito verde */
 }
 
 .billete-header {
@@ -91,7 +108,7 @@
 .tren-precio {
   font-weight: bold;
   font-size: 1.5rem;
-  color: #2e7d32; /* Verde dinero */
+  color: #2e7d32;
 }
 
 .billete-horarios {
@@ -108,3 +125,93 @@
   padding: 4px 10px;
   border-radius: 20px;
 }
+
+/* CARRITO FLOTANTE */
+.carrito-container {
+  /* Hacemos que el carrito se quede fijo al hacer scroll (sticky) */
+  position: sticky;
+  top: 2rem; 
+  height: max-content;
+}
+
+.carrito-card {
+  padding: 1.5rem;
+  border-top: 6px solid #1976d2 !important;
+}
+
+.carrito-card h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.carrito-card p {
+  margin: 0.5rem 0;
+  color: #555;
+}
+
+.carrito-divider {
+  border: 0;
+  height: 1px;
+  background: #eee;
+  margin: 1rem 0;
+}
+
+.carrito-total {
+  text-align: right;
+  color: #2e7d32;
+  margin-bottom: 1.5rem;
+}
+
+.carrito-vacio {
+  color: #888 !important;
+  font-style: italic;
+  text-align: center;
+  margin-top: 2rem !important;
+}
+
+/* Responsividad para móviles */
+@media (max-width: 800px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .search-button {
+    grid-column: 1;
+  }
+  .billete-horarios {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+  .layout-resultados-carrito {
+    grid-template-columns: 1fr; /* En móvil todo en una columna */
+  }
+  .carrito-container {
+    position: static; /* En móvil el carrito no flota */
+    order: -1; /* Ponemos el carrito arriba en móvil para que se vea */
+  }
+}
+
+/* NO RESULTADOS CARD */
+.no-resultados-card {
+  padding: 1.5rem;
+  border-left: 6px solid #ff9800 !important;
+  background-color: #fffde7 !important;
+  margin-top: 1rem;
+}
+
+.no-resultados-title {
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #e65100;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.no-resultados-text {
+  color: #5d4037;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  margin: 0;
+}
+

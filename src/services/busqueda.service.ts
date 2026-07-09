@@ -11,6 +11,10 @@ export interface Viaje {
 }
 
 // Función auxiliar para sumar minutos a una hora HH:mm
+/* Su finalidad es sumar minutos a una hora HH:mm 
+   el porque de hacer esta funcion es para calcular la hora de llegada de un tren
+   teniendo en cuenta la hora de salida y la duracion del viaje
+*/
 function sumarMinutos(hora: string, minutos: number): string {
   const partes = hora.split(':');
   const h = parseInt(partes[0]);

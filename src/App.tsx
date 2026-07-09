@@ -1,3 +1,4 @@
+import { Routes, Route } from 'react-router-dom'
 import SearchForm from './components/SearchForm/SearchForm'
 import './App.css'
 
@@ -5,12 +6,15 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>🚂 Reserva de Trenes</h1>
+        <h1>Reserva de Trenes</h1>
         <p>Encuentra y reserva tu próximo viaje al mejor precio.</p>
       </header>
-      
+
       <main className="app-main">
-        <SearchForm />
+        <Routes>
+          <Route path="/" element={<SearchForm />} />
+          {/* Aquí añadiremos la pantalla de seleccionar asientos pronto */}
+        </Routes>
       </main>
     </div>
   )
